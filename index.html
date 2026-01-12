@@ -6,24 +6,25 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui;background:#0a0a0a;color:#fff}
-header{position:sticky;top:0;background:#000;padding:14px 16px;font-weight:800;font-size:18px}
-.container{padding:16px;max-width:900px;margin:auto}
-.post-title{font-size:22px;font-weight:800;margin-bottom:12px}
-.post-content{line-height:1.8;color:#ddd}
-.downloads{margin-top:20px;display:grid;gap:10px}
-.download-btn{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-radius:8px;background:#141414;color:#fff;text-decoration:none;font-weight:600}
-.download-btn span{font-size:13px;color:#aaa}
+body{font-family:system-ui;background:#0b0b0b;color:#fff}
+header{position:sticky;top:0;z-index:10;background:#000;padding:14px 16px;font-size:18px;font-weight:800}
+.container{max-width:900px;margin:auto;padding:16px}
+.post-title{font-size:22px;font-weight:800;margin-bottom:14px}
+.downloads{display:grid;gap:14px}
+.download-box{background:#141414;border-radius:10px;padding:14px}
+.download-title{font-size:15px;font-weight:700;margin-bottom:4px}
+.download-size{font-size:12px;color:#aaa;margin-bottom:10px}
+.download-btn{display:block;text-align:center;padding:10px;border-radius:8px;background:#e50914;color:#fff;text-decoration:none;font-weight:700}
 .posts-list{display:grid;gap:12px}
-.post-link{display:block;padding:12px;border-radius:8px;background:#141414;color:#fff;text-decoration:none}
+.post-link{display:block;background:#141414;padding:14px;border-radius:10px;color:#fff;text-decoration:none}
 .post-link:hover{background:#1e1e1e}
-.skeleton{background:linear-gradient(90deg,#1a1a1a 25%,#2a2a2a 50%,#1a1a1a 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;border-radius:8px;height:60px}
+.skeleton{height:60px;border-radius:10px;background:linear-gradient(90deg,#1a1a1a 25%,#2a2a2a 50%,#1a1a1a 75%);background-size:200% 100%;animation:shimmer 1.4s infinite}
 @keyframes shimmer{to{background-position:-200% 0}}
 </style>
 </head>
 <body>
 
-<header>filesdl.live</header>
+<header id="headerTitle">filesdl.live</header>
 
 <div class="container" id="app">
   <div class="skeleton"></div>
@@ -33,61 +34,71 @@ header{position:sticky;top:0;background:#000;padding:14px 16px;font-weight:800;f
 <script>
 const API="https://filesdl.live/wp-json/wp/v2/posts?_embed&per_page=10";
 const app=document.getElementById("app");
+const headerTitle=document.getElementById("headerTitle");
 
-function qs(name){return new URLSearchParams(location.search).get(name)}
+function qs(k){return new URLSearchParams(location.search).get(k)}
 
-function parseDownloads(html){
-  const div=document.createElement("div");
-  div.innerHTML=html;
-  const links=[...div.querySelectorAll("a")];
-  return links.map(a=>{
-    const text=a.textContent.trim();
-    const sizeMatch=text.match(/\(([^)]+)\)/);
-    return{
-      url:a.href,
-      title:sizeMatch?text.replace(sizeMatch[0],"").trim():text,
-      size:sizeMatch?sizeMatch[1]:""
-    }
-  });
+function slugify(t){
+ return t.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+}
+
+function extractDownloads(html){
+ const div=document.createElement("div");
+ div.innerHTML=html;
+ const links=[...div.querySelectorAll("a")];
+ return links.map(a=>{
+   const txt=a.textContent.trim();
+   const sizeMatch=txt.match(/(\d+(\.\d+)?\s*(MB|GB))/i);
+   return{
+     url:a.href,
+     title:txt.replace(sizeMatch?sizeMatch[0]:"","").trim()||"Download File",
+     size:sizeMatch?sizeMatch[0]:""
+   };
+ });
 }
 
 function renderList(posts){
-  app.innerHTML='<div class="posts-list"></div>';
-  const list=app.firstChild;
-  posts.forEach(p=>{
-    const a=document.createElement("a");
-    a.className="post-link";
-    a.href="?post="+p.slug;
-    a.textContent=p.title.rendered;
-    list.appendChild(a);
-  });
+ app.innerHTML='<div class="posts-list"></div>';
+ const list=app.firstChild;
+ posts.forEach(p=>{
+   const a=document.createElement("a");
+   a.className="post-link";
+   a.href="?post="+slugify(p.title.rendered);
+   a.textContent=p.title.rendered;
+   list.appendChild(a);
+ });
 }
 
 function renderPost(p){
-  const downloads=parseDownloads(p.content.rendered);
-  app.innerHTML=`
-    <div class="post-title">${p.title.rendered}</div>
-    <div class="post-content">${p.content.rendered}</div>
-    <div class="downloads">
-      ${downloads.map(d=>`
-        <a class="download-btn" href="${d.url}" target="_blank">
-          <div>${d.title}</div>
-          <span>${d.size}</span>
-        </a>`).join("")}
-    </div>
-  `;
+ const downloads=extractDownloads(p.content.rendered);
+ document.title=p.title.rendered+" - filesdl.live";
+ headerTitle.textContent=p.title.rendered;
+ history.replaceState({},'',"?post="+slugify(p.title.rendered));
+ app.innerHTML=`
+   <div class="post-title">${p.title.rendered}</div>
+   <div class="downloads">
+     ${downloads.map(d=>`
+       <div class="download-box">
+         <div class="download-title">${d.title}</div>
+         <div class="download-size">${d.size}</div>
+         <a class="download-btn" href="${d.url}" target="_blank">Download</a>
+       </div>
+     `).join("")}
+   </div>
+ `;
 }
 
-fetch(API).then(r=>r.json()).then(posts=>{
-  const slug=qs("post");
-  if(slug){
-    const post=posts.find(p=>p.slug===slug);
-    if(post){renderPost(post);return;}
-  }
-  renderList(posts);
-}).catch(()=>{
-  app.innerHTML="<p>Failed to load data</p>";
-});
+fetch(API)
+.then(r=>r.json())
+.then(posts=>{
+ const slug=qs("post");
+ if(slug){
+   const post=posts.find(p=>slugify(p.title.rendered)===slug);
+   if(post){renderPost(post);return;}
+ }
+ renderList(posts);
+})
+.catch(()=>{app.innerHTML="<p>Failed to load</p>"});
 </script>
 
 </body>
