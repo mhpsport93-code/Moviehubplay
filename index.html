@@ -30,7 +30,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 /* NOTICE*/
 .notice-bar{
-  background:linear-gradient(135deg,var(--accent),var(--accent2)); /* left-top â†’ right-bottom */
+  background:linear-gradient(135deg,var(--accent),var(--accent2)); /* left-top → right-bottom */
   padding:12px 16px;
   margin:12px 20px;              /* 20px left & right */
   border-radius:12px;
@@ -266,7 +266,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
   <div class="notice-text">
     <div class="notice-heading">NOTICE</div>
     <div class="notice-content">
-    👋  Welcome to MovieHub! Get latest movies and shows updates here!
+      Welcome to MovieHub! Get latest movies and shows updates here!
     </div>
   </div>
   <i class="fa fa-times notice-close"
@@ -307,7 +307,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 
 <article class="post-page" id="postPage">
 <div class="post-header">
-<button class="post-close" onclick="goHome()">➜</button>
+<button class="post-close" onclick="goHome()"></button>
 <h1 class="post-page-title" id="postTitle"></h1>
 <img id="postPoster" class="post-page-poster">
 <div class="share-buttons">
@@ -323,12 +323,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </section>
 </article>
 
-<footer class="footer">©️2026MovieHub</footer>
+<footer class="footer">�2026MovieHub</footer>
 
 <script>
 var API="https://script.google.com/macros/s/AKfycbzgtOcczn9kj8gVEhQ5WY7pEAOhCJu88z1ieUWRd6oxtNgdvPLtZ3MAVuBjxEf_NyLt/exec";
 var allPosts=[],page=1,loading=false,finished=false,query="",heroIndex=0,heroTimer,currentPost=null;
-
+function getQueryParam(name){
+  return new URLSearchParams(window.location.search).get(name);
+}
 function getImage(h){var m=h.match(/<img[^>]+src="([^">]+)"/i);return m?m[1]:""}
 function skeleton(){return'<div class="skeleton-card skeleton"><div class="skeleton-poster skeleton"></div><div class="skeleton-text skeleton"></div><div class="skeleton-text skeleton"></div></div>'}
 
@@ -341,6 +343,14 @@ function loadPosts(){
   g.querySelectorAll(".skeleton-card").forEach(e=>e.remove());
   if(!d.results||!d.results.length){finished=true;loading=false;return}
   d.results.forEach(p=>{allPosts.push(p);renderCard(p,g)});
+  const postSlug = getQueryParam("post");
+if(postSlug){
+  const found = d.results.find(x => x.slug === postSlug);
+  if(found){
+    openPost(found);
+    return;
+  }
+}
   if(page===1)renderHero();
   page++;loading=false;
  }).catch(()=>{g.querySelectorAll(".skeleton-card").forEach(e=>e.remove());loading=false})
@@ -423,7 +433,15 @@ function shareNative(){navigator.share?navigator.share({url:location.href}):navi
 
 window.addEventListener("scroll",()=>{if(!document.getElementById("postPage").classList.contains("active")&&innerHeight+scrollY>document.body.offsetHeight-400)loadPosts()});
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&document.getElementById("postPage").classList.contains("active"))goHome()});
-window.addEventListener("popstate",()=>goHome());
+window.addEventListener("popstate",()=>{
+  const slug = getQueryParam("post");
+  if(slug){
+    const found = allPosts.find(x=>x.slug===slug);
+    if(found) openPost(found);
+  }else{
+    goHome();
+  }
+});
 
 loadPosts();
 </script>
